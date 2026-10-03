@@ -18,6 +18,7 @@ body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:'IM 
 .bar b{position:absolute;inset:0;font:600 11px/15px Georgia,serif;text-align:center;color:#fff;text-shadow:0 1px 2px #000}
 .bar.xp{height:6px;margin-top:3px}.bar.xp i{background:var(--mist)}
 #lv{margin-top:5px;font-size:14px;color:var(--gold);text-shadow:0 1px 3px #000}
+#mute{position:fixed;left:calc(env(safe-area-inset-left,0px) + 10px);top:calc(env(safe-area-inset-top,0px) + 66px);width:40px;height:40px;padding:0;font-size:20px;z-index:12;touch-action:manipulation;background:rgba(14,9,15,.7)}
 #bossbar{position:fixed;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 10px);display:none;text-align:center;pointer-events:none;font-size:14px;color:#e0a0a0}
 #bossbar .bar{width:min(60vw,380px);height:12px}
 #arrow{position:fixed;right:calc(env(safe-area-inset-right,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 10px);text-align:center;font-size:12px;color:var(--gold);pointer-events:none;display:none}
@@ -46,13 +47,13 @@ button:hover,button:focus-visible{background:#4a1118;outline:2px solid var(--gol
 <div id="hud"><div class="bar"><i id="hp"></i><b id="hpt"></b></div><div class="bar xp"><i id="xp"></i></div><div id="lv"></div></div>
 <div id="bossbar">Lorde Aldric Morvaine<div class="bar"><i id="bhp"></i></div></div>
 <div id="arrow"><span id="ar">➤</span>Jazigo</div>
-<div id="toast"></div>
+<button id="mute" aria-label="Ligar ou desligar o som">🔊</button><div id="toast"></div>
 <div id="touch"><div id="joy"><div id="knob"></div></div><div id="atk">⚔</div></div>
 <div id="dlg"><div id="who"></div><p id="txt"></p><small>toque para continuar ▸</small></div>
 <div id="title" class="ov">
   <h1>Réquiem de Morvaine</h1>
   <p>O Lorde está morto e enterrado. Ainda assim, caminha pelo reino.</p>
-  <div class="row"><button data-g="m">Caçador</button><button data-g="f">Caçadora</button></div>
+  <div class="row"><button id="go">Começar</button></div>
   <small>Computador: WASD ou setas para andar, Espaço para atacar. Celular: joystick à esquerda e botão ⚔ à direita.</small>
 </div>
 <div id="end" class="ov" style="display:none"><h1 id="et"></h1><p id="ep"></p><button id="eb">Jogar de novo</button></div>
@@ -112,7 +113,7 @@ function blocked(x,y,r){
 function mv(e,dx,dy){if(!blocked(e.x+dx,e.y,e.r))e.x+=dx;if(!blocked(e.x,e.y+dy,e.r))e.y+=dy}
 
 /* ---------- Entidades ---------- */
-function mk(t,x,y){const d=T[t],e={t,x,y,hp:d.hp,max:d.hp,r:d.r,kx:0,ky:0,hit:0,ph:Math.random()*6,aw:!d.wake,cd:0,wx:0,wy:0,wt:0,sm:3};ents.push(e);return e}
+function mk(t,x,y){const d=T[t],e={t,x,y,hp:d.hp,max:d.hp,r:d.r,kx:0,ky:0,hit:0,ph:Math.random()*6,aw:!d.wake,cd:0,wx:0,wy:0,wt:0,sm:3,dir:1};ents.push(e);return e}
 function spawn(t,n){for(let i=0;i<n;i++)for(let k=0;k<60;k++){const c=reach[Math.random()*reach.length|0],x=c[0]*TS+16,y=c[1]*TS+16;if(Math.hypot(x-start.x,y-start.y)>280&&Math.hypot(x-bossPos.x,y-bossPos.y)>130){mk(t,x,y);break}}}
 function newGame(){
   ents=[];pots=[];floats=[];kills=0;flash=0;
@@ -125,22 +126,22 @@ function flt(x,y,t,c){floats.push({x,y,t,c,l:1})}
 
 function hurt(dmg,nx,ny){
   if(p.inv>0)return;
-  p.hp-=dmg;p.inv=.8;flash=.35;flt(p.x,p.y-12,'-'+dmg,'#ff5a5a');
+  p.hp-=dmg;p.inv=.8;flash=.35;sfx.hurt();flt(p.x,p.y-12,'-'+dmg,'#ff5a5a');
   mv(p,nx*-14,ny*-14);
-  if(p.hp<=0){state='dead';endScreen(false)}
+  if(p.hp<=0){state='dead';sfx.lose();endScreen(false)}
 }
 function gainXP(n){
   p.xp+=n;
-  while(p.xp>=p.need){p.xp-=p.need;p.lv++;p.need=30+(p.lv-1)*25;p.max+=15;p.hp=Math.min(p.max,p.hp+40);p.dmg+=3;say('Nível '+p.lv+'. Sua lâmina fica mais afiada.',2000)}
+  while(p.xp>=p.need){p.xp-=p.need;p.lv++;p.need=30+(p.lv-1)*25;p.max+=15;p.hp=Math.min(p.max,p.hp+40);p.dmg+=3;say('Nível '+p.lv+'. Sua lâmina fica mais afiada.',2000);sfx.lvl()}
 }
 function dmgE(e,dmg,nx,ny){
-  e.hp-=dmg;e.hit=.15;flt(e.x,e.y-14,dmg,'#fff');
+  e.hp-=dmg;e.hit=.15;sfx.hit(e.t);flt(e.x,e.y-14,dmg,'#fff');
   const kb=e.t=='boss'?30:e.t=='statue'?40:160;e.kx=nx*kb;e.ky=ny*kb;
   if(T[e.t].wake)e.aw=true;
   if(e.hp<=0)killE(e);
 }
 function killE(e){
-  ents.splice(ents.indexOf(e),1);kills++;gainXP(T[e.t].xp);
+  ents.splice(ents.indexOf(e),1);kills++;sfx.die(e.t);gainXP(T[e.t].xp);
   if(e.t=='boss'){
     state='dialog';
     dialog([
@@ -154,7 +155,7 @@ function attack(){
   let best=null,bd=75;
   for(const e of ents){const d=dist(e,p);if(d<bd){bd=d;best=e}}
   if(best){const d=bd||1;p.fx=(best.x-p.x)/d;p.fy=(best.y-p.y)/d}
-  p.cd=.38;p.atk=.16;
+  p.cd=.38;p.atk=.16;sfx.slash();
   for(const e of ents.slice()){
     const dx=e.x-p.x,dy=e.y-p.y,d=Math.hypot(dx,dy)||1;
     if(d<46+e.r&&(dx*p.fx+dy*p.fy)/d>-.2)dmgE(e,p.dmg,dx/d,dy/d);
@@ -178,10 +179,11 @@ function update(dt){
     const D=T[e.t];e.hit-=dt;
     const dx=p.x-e.x,dy=p.y-e.y,d=Math.hypot(dx,dy)||1;
     if(!e.aw){
-      if(d<D.wake){e.aw=true;if(e.t=='boss')say('"Isoooolde..." O Lorde Aldric se ergue entre as tumbas.',3200)}
+      if(d<D.wake){e.aw=true;if(e.t=='statue')sfx.stone();if(e.t=='boss'){sfx.bossWake();say('"Isoooolde..." O Lorde Aldric se ergue entre as tumbas.',3200)}}
       else continue;
     }
     let vx=0,vy=0;const chase=d<(D.aggro||230);
+    if(chase){e.dir=dx>=0?1:-1;ambience(e,d,dt)}
     if(chase){vx=dx/d;vy=dy/d;if(e.t=='bat'){const w=Math.sin(time*7+e.ph);vx+=-dy/d*w*.9;vy+=dx/d*w*.9}}
     else{e.wt-=dt;if(e.wt<=0){e.wt=1+Math.random()*2;const a=Math.random()*6.28;e.wx=Math.cos(a)*.4;e.wy=Math.sin(a)*.4}vx=e.wx;vy=e.wy}
     const s=D.sp*(e.t=='bat'&&!chase?.5:1);
@@ -189,9 +191,9 @@ function update(dt){
     if(D.fly){e.x=Math.max(TS,Math.min((MW-1)*TS,e.x+mx));e.y=Math.max(TS,Math.min((MH-1)*TS,e.y+my))}else mv(e,mx,my);
     const dec=Math.exp(-10*dt);e.kx*=dec;e.ky*=dec;
     if(d<e.r+p.r+3)hurt(D.dmg,dx/d,dy/d);
-    if(e.t=='boss'&&e.hp<e.max/2){e.sm-=dt;if(e.sm<=0){e.sm=7;mk('bat',e.x-30,e.y);mk('bat',e.x+30,e.y);say('Morcegos jorram do jazigo!',1600)}}
+    if(e.t=='boss'&&e.hp<e.max/2){e.sm-=dt;if(e.sm<=0){e.sm=7;mk('bat',e.x-30,e.y);mk('bat',e.x+30,e.y);say('Morcegos jorram do jazigo!',1600);sfx.squeak(1)}}
   }
-  for(let i=pots.length-1;i>=0;i--)if(dist(pots[i],p)<16){const h=Math.min(35,p.max-p.hp);p.hp+=h;flt(p.x,p.y-14,'+'+Math.round(h),'#7be08a');pots.splice(i,1)}
+  for(let i=pots.length-1;i>=0;i--)if(dist(pots[i],p)<16){const h=Math.min(35,p.max-p.hp);p.hp+=h;flt(p.x,p.y-14,'+'+Math.round(h),'#7be08a');sfx.pot();pots.splice(i,1)}
   for(let i=floats.length-1;i>=0;i--){const f=floats[i];f.l-=dt*1.2;f.y-=20*dt;if(f.l<=0)floats.splice(i,1)}
 }
 
@@ -216,6 +218,41 @@ function drawTile(x,y,t){
     ctx.fillStyle='#3a3940';ctx.fillRect(px+15,py+8,2,10);ctx.fillRect(px+12,py+11,8,2);
   }
 }
+const figure=(c1,c2,eye,d)=>{ctx.fillStyle=c1;ctx.beginPath();ctx.moveTo(-9,9);ctx.lineTo(-6,-6);ctx.lineTo(6,-6);ctx.lineTo(9,9);ctx.closePath();ctx.fill();ctx.fillStyle=c2;ctx.beginPath();ctx.arc(0,-8,7,0,6.3);ctx.fill();ctx.fillStyle=eye;ctx.fillRect(-3+d*2,-9,2,2);ctx.fillRect(1+d*2,-9,2,2)};
+const tri=(a,b,c,e,f,g)=>{ctx.beginPath();ctx.moveTo(a,b);ctx.lineTo(c,e);ctx.lineTo(f,g);ctx.closePath();ctx.fill()};
+const DRAW={
+ bat(e,d){const f=Math.sin(time*18+e.ph)*6;ctx.fillStyle='#2a1a33';
+  for(const s of[-1,1]){ctx.save();ctx.scale(s,1);ctx.beginPath();ctx.moveTo(-2,-1);ctx.lineTo(-15,-8+f);ctx.lineTo(-12,0);ctx.lineTo(-9,-2+f/3);ctx.lineTo(-6,4);ctx.closePath();ctx.fill();ctx.restore()}
+  ctx.fillStyle='#3a2446';ctx.beginPath();ctx.ellipse(0,0,4.5,6,0,0,6.3);ctx.fill();
+  tri(-4,-4,-3,-10,0,-5);tri(4,-4,3,-10,0,-5);
+  ctx.fillStyle='#ff3b3b';ctx.fillRect(-3,-2,2,2);ctx.fillRect(1,-2,2,2)},
+ spider(e,d){ctx.strokeStyle='#2d2238';ctx.lineWidth=1.6;const w=Math.sin(time*14+e.ph)*2;
+  for(let i=0;i<4;i++){const y=-4+i*3.5;for(const s of[-1,1]){ctx.beginPath();ctx.moveTo(s*3,y*.6);ctx.lineTo(s*10,y-3+(i%2?w:-w));ctx.lineTo(s*14,y+4);ctx.stroke()}}
+  ctx.fillStyle='#1c1424';ctx.beginPath();ctx.ellipse(0,3,6,5.5,0,0,6.3);ctx.fill();
+  ctx.fillStyle='#3a2a4c';ctx.beginPath();ctx.arc(0,-4,3.8,0,6.3);ctx.fill();
+  ctx.fillStyle='#b02a8a';ctx.fillRect(-1,1,2,5);
+  ctx.fillStyle='#ff3b3b';ctx.fillRect(-2.5+d,-5.5,2,2);ctx.fillRect(1+d*.5,-5.5,2,2)},
+ zombie(e,d){ctx.strokeStyle='#6f8a6a';ctx.lineWidth=3;const a=Math.sin(time*5+e.ph)*1.5;
+  ctx.beginPath();ctx.moveTo(d*4,-2);ctx.lineTo(d*16,-5+a);ctx.moveTo(d*3,1);ctx.lineTo(d*15,-a);ctx.stroke();
+  figure('#39463a','#6f8a6a','#e6ff7a',d);
+  ctx.fillStyle='#39463a';tri(-9,9,-6,13,-3,9);tri(-2,9,1,14,4,9);tri(4,9,7,12,9,9);
+  ctx.strokeStyle='#1c231d';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-4,-2);ctx.lineTo(0,3);ctx.moveTo(3,-3);ctx.lineTo(5,2);ctx.stroke()},
+ statue(e,d){ctx.save();ctx.scale(1.3,1.3);
+  ctx.fillStyle='#55555d';ctx.fillRect(-11,9,22,5);
+  ctx.fillStyle='#4a4a52';tri(-6,-2,-17,-12,-8,7);tri(6,-2,17,-12,8,7);
+  figure('#6c6c75','#8d8d97',e.aw?'#ff3030':'#222',d);
+  ctx.fillStyle='#8d8d97';tri(-6,-12,-5,-19,-2,-14);tri(6,-12,5,-19,2,-14);
+  ctx.strokeStyle='#44444c';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(-3,0);ctx.lineTo(1,5);ctx.lineTo(-1,8);ctx.stroke();ctx.restore()},
+ boss(e,d){ctx.save();ctx.scale(1.8,1.8);
+  ctx.strokeStyle='#b9b2a2';ctx.lineWidth=2.4;const a=Math.sin(time*4)*1.5;
+  ctx.beginPath();ctx.moveTo(d*4,-2);ctx.lineTo(d*14,-5+a);ctx.moveTo(d*3,1);ctx.lineTo(d*13,-a);ctx.stroke();
+  figure('#1d0a18','#bdb6a6','#ff2a2a',d);
+  ctx.fillStyle='#6a1226';tri(-7,-6,-12,-12,-3,-4);tri(7,-6,12,-12,3,-4);
+  ctx.strokeStyle='#b8934a';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(-9,9);ctx.lineTo(-6,-6);ctx.moveTo(9,9);ctx.lineTo(6,-6);ctx.stroke();
+  ctx.fillStyle='#d4af37';tri(-5,-14,-4,-20,-2,-14);tri(-2,-14,0,-22,2,-14);tri(2,-14,4,-20,5,-14);
+  ctx.fillStyle='#e8e0d0';ctx.fillRect(-2+d,-4,1,2);ctx.fillRect(1+d,-4,1,2);
+  ctx.restore()}
+};
 function drawEnt(e){
   const D=T[e.t];let y=e.y;if(e.t=='bat')y+=Math.sin(time*12+e.ph)*3-4;
   ctx.save();
@@ -223,8 +260,7 @@ function drawEnt(e){
   if(e.hit>0){ctx.shadowColor='#f33';ctx.shadowBlur=12}
   else if(e.t=='boss'){ctx.shadowColor='#c00';ctx.shadowBlur=16}
   else if(e.t=='statue'&&e.aw){ctx.shadowColor='#b00';ctx.shadowBlur=8}
-  ctx.font=D.sz+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.globalAlpha=e.t=='statue'&&!e.aw?.85:1;ctx.fillText(D.e,e.x,y);
+  ctx.translate(e.x,y);DRAW[e.t](e,e.dir||1);
   ctx.restore();
   if(e.hp<e.max&&e.t!='boss'){ctx.fillStyle='#000';ctx.fillRect(e.x-10,e.y-e.r-12,20,3);ctx.fillStyle='#c22';ctx.fillRect(e.x-10,e.y-e.r-12,20*e.hp/e.max,3)}
 }
@@ -281,7 +317,7 @@ let dq=[],di=0,dcb=null,typing=null;
 function dialog(lines,cb){dq=lines;di=0;dcb=cb;state='dialog';$('dlg').style.display='block';showLine()}
 function showLine(){
   const l=dq[di],el=$('txt');$('who').textContent=l[0];el.textContent='';let i=0;
-  clearInterval(typing);typing=setInterval(()=>{el.textContent=l[1].slice(0,++i);if(i>=l[1].length)clearInterval(typing)},22);
+  clearInterval(typing);typing=setInterval(()=>{el.textContent=l[1].slice(0,++i);if(i%2==0)sfx.blip(l[0]);if(i>=l[1].length)clearInterval(typing)},22);
 }
 function nextLine(){
   if(state!='dialog')return;
@@ -291,7 +327,7 @@ function nextLine(){
   if(di>=dq.length){$('dlg').style.display='none';state='play';if(dcb)dcb()}else showLine();
 }
 function endScreen(win){
-  $('end').style.display='flex';
+  $('end').style.display='flex';if(win)sfx.win();
   $('et').textContent=win?'O Lorde repousa':'Você tombou';
   $('ep').textContent=win
     ?'A maldição se dissipa, mas as últimas palavras de Aldric ainda pesam. Lady Isolde espera na mansão com a bolsa de ouro, e o que você fará com a verdade do vinho é decisão sua. Nível '+p.lv+', '+kills+' mortos abatidos.'
@@ -300,8 +336,8 @@ function endScreen(win){
 }
 $('eb').onclick=()=>{$('end').style.display='none';newGame();state='play'};
 document.querySelectorAll('#title button').forEach(b=>b.onclick=()=>{
-  fem=b.dataset.g=='f';$('title').style.display='none';
-  const h=fem?'Caçadora':'Caçador';
+  initAudio();fem=true;$('title').style.display='none';
+  const h='Caçadora';
   dialog([
     ['Lady Isolde Morvaine','Aproxime-se, '+h.toLowerCase()+'. Dizem que você não teme a escuridão. Eu temo o que caminha nela.'],
     ['Lady Isolde Morvaine','Meu marido, o Lorde Aldric, partiu há duas semanas. Eu mesma o enterrei no jazigo da família, ao nordeste do reino.'],
@@ -341,6 +377,61 @@ function showTouch(){$('touch').style.display='block'}
 if(matchMedia('(pointer:coarse)').matches||'ontouchstart' in window)showTouch();
 addEventListener('touchstart',showTouch,{once:true,passive:true});
 document.addEventListener('contextmenu',e=>e.preventDefault());
+
+/* ---------- Som (sintetizado com Web Audio) ---------- */
+let AC,master,droneF,noiseBuf,muted=false;
+function initAudio(){
+  if(AC){if(AC.state=='suspended')AC.resume();return}
+  try{
+    AC=new(window.AudioContext||window.webkitAudioContext)();master=AC.createGain();master.gain.value=muted?0:.55;master.connect(AC.destination);
+    noiseBuf=AC.createBuffer(1,AC.sampleRate,AC.sampleRate);const a=noiseBuf.getChannelData(0);for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;
+    music();
+  }catch(err){AC=null}
+}
+function tone(f,d,type,v,f2,delay){
+  if(!AC)return;const t=AC.currentTime+(delay||0),o=AC.createOscillator(),g=AC.createGain();
+  o.type=type;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);
+  g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(master);o.start(t);o.stop(t+d);
+}
+function noise(d,v,fc,type){
+  if(!AC)return;const t=AC.currentTime,s=AC.createBufferSource(),fl=AC.createBiquadFilter(),g=AC.createGain();
+  s.buffer=noiseBuf;fl.type=type||'lowpass';fl.frequency.value=fc;g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
+  s.connect(fl);fl.connect(g);g.connect(master);s.start(t,Math.random()*.5);s.stop(t+d);
+}
+const sfx={
+  slash(){noise(.14,.18,2600,'bandpass');tone(420,.12,'triangle',.06,160)},
+  hit(t){tone(t=='statue'||t=='boss'?110:200,.12,'square',.09,60);noise(.08,.12,900)},
+  die(t){if(t=='bat')tone(2200,.25,'sawtooth',.06,500);else if(t=='spider'){noise(.25,.12,3000,'highpass');tone(300,.2,'square',.05,80)}else{tone(150,.5,'sawtooth',.12,35);noise(.4,.12,500)}},
+  hurt(){tone(170,.28,'sawtooth',.14,55);noise(.18,.15,700)},
+  pot(){tone(520,.18,'sine',.12,880);tone(880,.2,'sine',.1,1175,.1)},
+  lvl(){[392,523,659,784].forEach((f,i)=>tone(f,.4,'triangle',.1,0,i*.1))},
+  stone(){noise(.7,.2,400);tone(70,.7,'sawtooth',.08,50)},
+  bossWake(){tone(55,2,'sawtooth',.2,40);tone(82,2,'square',.07,60);noise(1.2,.1,300);if(droneF)droneF.frequency.setTargetAtTime(420,AC.currentTime,1)},
+  squeak(v){tone(1800+Math.random()*700,.07,'square',.03*v,2600)},
+  blip(w){tone((w=='Lady Isolde Morvaine'?420:w=='Lorde Aldric'?130:300)+Math.random()*40,.04,'square',.025)},
+  win(){if(droneF)droneF.frequency.setTargetAtTime(180,AC.currentTime,1);[261.6,329.6,392,523].forEach((f,i)=>tone(f,1.6,'sine',.1,0,i*.18))},
+  lose(){tone(220,1.2,'sawtooth',.12,40);tone(165,1.4,'triangle',.1,30,.2)}
+};
+function ambience(e,d,dt){
+  if(!AC||d>260)return;const v=1-d/260,r=Math.random();
+  if(e.t=='bat'&&r<dt*.4)sfx.squeak(v*3);
+  else if(e.t=='zombie'&&r<dt*.18)tone(95+Math.random()*25,.6,'sawtooth',.05*v+.01,55);
+  else if(e.t=='spider'&&r<dt*.9)noise(.05,.05*v,5000,'highpass');
+  else if(e.t=='statue'&&r<dt*.3)noise(.3,.06*v,300);
+}
+function music(){
+  const o1=AC.createOscillator(),o2=AC.createOscillator(),f=AC.createBiquadFilter(),g=AC.createGain(),l=AC.createOscillator(),lg=AC.createGain();
+  o1.type=o2.type='sawtooth';o1.frequency.value=55;o2.frequency.value=55.4;f.type='lowpass';f.frequency.value=180;g.gain.value=.07;
+  l.frequency.value=.12;lg.gain.value=.03;l.connect(lg);lg.connect(g.gain);
+  o1.connect(f);o2.connect(f);f.connect(g);g.connect(master);[o1,o2,l].forEach(o=>o.start());droneF=f;
+  (function chime(){
+    const boss=bossE&&bossE.aw&&bossE.hp>0,n=boss?[110,130.8,164.8,98]:[220,261.6,329.6,392,440,523];
+    tone(n[Math.random()*n.length|0],2.5,'sine',.05);
+    setTimeout(chime,boss?1800+Math.random()*1500:4500+Math.random()*5000);
+  })();
+}
+['pointerdown','keydown'].forEach(ev=>addEventListener(ev,initAudio));
+$('mute').onclick=()=>{muted=!muted;if(master)master.gain.value=muted?0:.55;$('mute').textContent=muted?'🔇':'🔊';$('mute').blur()};
 
 /* ---------- Loop ---------- */
 function loop(t){
