@@ -36,7 +36,7 @@ button:active{transform:translateY(3px);box-shadow:none}
 (()=>{
 const $=i=>document.getElementById(i),rnd=(a,b)=>a+Math.random()*(b-a),PI=Math.PI,rs0=Math.random;
 const R=new THREE.WebGLRenderer({antialias:false});R.setPixelRatio(Math.min(devicePixelRatio||1,1)*.6);document.body.prepend(R.domElement);
-const cam=new THREE.PerspectiveCamera(50,1,.1,200);
+const cam=new THREE.PerspectiveCamera(50,1,.6,120);
 const rs=()=>{R.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()};addEventListener('resize',rs);rs();
 const M=(c,o)=>new THREE.MeshPhongMaterial(Object.assign({color:c,flatShading:true,shininess:0,specular:0x000000},o));
 const put=(m,x,y,z,p)=>{m.position.set(x,y,z);p&&p.add(m);return m};
@@ -94,13 +94,13 @@ const notes=[0,2,4,7,9,7,4,2];setInterval(()=>{if(st=='play'||st=='intro')snd(22
 
 function initWorld(i){
  W=[];papers=[];npcs=[];machs=[];parts=[];spin=[];blink=[];S=new THREE.Scene();S.background=new THREE.Color(0x9fb3c8);light(S);
- const fl=(x1,z1,x2,z2,c)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(x2-x1,z2-z1),M(c));m.rotation.x=-PI/2;put(m,(x1+x2)/2,.01,(z1+z2)/2,S)};
+ let fy=0;const fl=(x1,z1,x2,z2,c)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(x2-x1,z2-z1),M(c));m.rotation.x=-PI/2;put(m,(x1+x2)/2,fy+=.012,(z1+z2)/2,S)};
  const col=(x1,z1,x2,z2)=>{const w={x1,z1,x2,z2};W.push(w);return w};
  const wall=(x1,z1,x2,z2,h=2.6,c=0xf0e9dd)=>{const v=x1==x2,a=v?x1-.2:x1,b=v?z1:z1-.2,e=v?x1+.2:x2,f=v?z2:z1+.2;box(e-a,h,f-b,c,(a+e)/2,h/2,(b+f)/2,S);col(a,b,e,f)};
  const wl=(ax,f,rs,h,c)=>rs.forEach(r=>ax=='x'?wall(f,r[0],f,r[1],h,c):wall(r[0],f,r[1],f,h,c));
  fl(-40,-20,38,20,0x77808c);fl(-40,-20,-12,20,0xd9c7a5);fl(-12,-20,38,6,0x8f9bb3);fl(-12,6,38,10,0xb7b0c2);fl(-12,10,8,20,0xbfe3ea);fl(-34,4,-22,16,0xa04a4a);
  const cv=document.createElement('canvas');cv.width=cv.height=2;const cx=cv.getContext('2d');cx.fillStyle='#f4f4ee';cx.fillRect(0,0,2,2);cx.fillStyle='#4a8a5a';cx.fillRect(0,0,1,1);cx.fillRect(1,1,1,1);const tx=new THREE.CanvasTexture(cv);tx.magFilter=tx.minFilter=THREE.NearestFilter;tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(7.5,2.5);
- const ck=new THREE.Mesh(new THREE.PlaneGeometry(30,10),M(0xffffff,{map:tx}));ck.rotation.x=-PI/2;put(ck,23,.02,15,S);
+ const ck=new THREE.Mesh(new THREE.PlaneGeometry(30,10),M(0xffffff,{map:tx}));ck.rotation.x=-PI/2;put(ck,23,.12,15,S);
  wl('x',-40,[[-20,20]]);wl('x',38,[[-20,20]]);wl('z',-20,[[-40,38]]);wl('z',20,[[-40,38]]);
  wl('x',-12,[[-20,-3],[3,6.4],[9.6,20]]);wl('z',6,[[-12,2],[6,18],[22,38]]);wl('z',10,[[-12,-9],[-6,2],[5,14],[18,38]]);wl('x',-2,[[10,20]]);wl('x',8,[[10,20]]);
  const stap=(x,y,z)=>{box(.4,.07,.14,0xcc2222,x,y+.04,z,S);box(.34,.05,.12,0x222222,x,y+.1,z,S)};
@@ -151,7 +151,7 @@ function initWorld(i){
  const bd=mkBoss();bossD=bd;BP=new THREE.Group();bd.g.scale.setScalar(.9);BP.add(bd.g);S.add(BP);BP.x=0;BP.z=1;BP.ri=0;BP.ry=0;BP.det=0;BP.see=false;BP.pause=0;
  vis=new THREE.Mesh(new THREE.CircleGeometry(11,14,-PI/2-.61,1.22),new THREE.MeshBasicMaterial({color:0xff2a1a,transparent:true,opacity:.22,depthWrite:false,side:2}));vis.rotation.x=-PI/2;vis.position.y=.06;BP.add(vis);
  flash=new THREE.PointLight(0xff8a30,0,30);flash.position.set(-27,3,-15.5);S.add(flash);
- left=300;got=0;en=100;det=0;introT=0;said=0;boomed=0;shake=0;ti=i;cp.set(-21,2.4,-13.2);cl.set(-26,1.4,-15.5)}
+ left=180;got=0;en=100;det=0;introT=0;said=0;boomed=0;shake=0;ti=i;cp.set(-21,2.4,-13.2);cl.set(-26,1.4,-15.5)}
 const ROUTE=[[0,1],[20,1],[20,8],[-16,8],[-16,0]];
 
 function explode(){$('bub').hidden=true;S.remove(printerG);W=W.filter(w=>w!==pcol);shake=1.3;flash.intensity=8;boomS();
